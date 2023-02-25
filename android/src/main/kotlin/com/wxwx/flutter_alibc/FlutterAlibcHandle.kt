@@ -1,7 +1,5 @@
 package com.wxwx.flutter_alibc
 import android.app.Activity
-import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.webkit.WebChromeClient
 import android.webkit.WebViewClient
@@ -30,6 +28,17 @@ class FlutterAlibcHandle(var methodChannel: MethodChannel?){
     fun disposed(){
         this.methodChannel = null
         this.activity = null
+    }
+
+
+
+    companion object {
+        var callBack: CallBack? = null
+    }
+
+    interface CallBack {
+        fun failed(str: String?)
+        fun success(str: String?)
     }
 
     /**
@@ -160,6 +169,34 @@ class FlutterAlibcHandle(var methodChannel: MethodChannel?){
         intent.putExtra("arguments", map)
         activity!!.startActivity(intent)
     }
+
+    fun qdByHide(call: MethodCall) {
+        if (!AlibcLogin.getInstance().isLogin) {
+            return
+        }
+        callBack = (object : CallBack {
+            override fun success(code: String?) {
+                val resMap: HashMap<String, Any?> = HashMap<String, Any?>()
+                resMap["code"] = code
+                methodChannel!!.invokeMethod("AlibcQdByHide", PluginResponse.success(resMap).toMap())
+            }
+
+            override fun failed(errorMsg: String?) {
+                var code = -1
+                methodChannel!!.invokeMethod("AlibcQdByHide", PluginResponse(code.toString(), errorMsg, null).toMap())
+            }
+        })
+
+        val url = call.argument<String>("url")
+
+        val intent = Intent(
+            activity!!,
+            QdHideActivity::class.java
+        )
+        intent.putExtra("url", url)
+        activity!!.startActivity(intent)
+    }
+
 
     /**
      * 通过URL方式打开淘宝

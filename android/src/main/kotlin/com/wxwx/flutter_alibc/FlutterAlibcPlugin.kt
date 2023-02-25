@@ -41,6 +41,8 @@ class FlutterAlibcPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
       handle?.taoKeLoginForCode(call)
     } else if (call.method == "loginOut") {
       handle?.logoutTaoBao(result)
+    } else if (call.method == "qdByHide") {
+      handle?.qdByHide(call)
     } else if (call.method == "openByUrl") {
       handle?.openByUrl(call, result)
     } else if (call.method == "openShop") {

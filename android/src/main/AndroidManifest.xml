@@ -1,8 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-  package="com.wxwx.flutter_alibc">
-    <application>
-        <activity android:name=".web.WebViewActivity">
+    package="com.wxwx.flutter_alibc">
 
-        </activity>
+    <application>
+        <activity
+            android:name=".QdHideActivity"
+            android:exported="false" />
+        <activity android:name=".web.WebViewActivity"
+            android:exported="false" />
     </application>
+
 </manifest>

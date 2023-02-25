@@ -50,6 +50,7 @@ enum CallBackType {
   AlibcTaobaoLogin,
   AlibcTaokeLogin,
   AlibcTaokeLoginForCode,
+  AlibcQdByHide,
   AlibcOpenURL,
   AlibcOpenCar,
   AlibcOpenDetail,

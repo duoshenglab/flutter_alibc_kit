@@ -18,6 +18,7 @@ struct FlutterAlibcConstKey {
         case AlibcTaobaoLogin = "AlibcTaobaoLogin"
         case AlibcTaokeLogin = "AlibcTaokeLogin"
         case AlibcTaokeLoginForCode = "AlibcTaokeLoginForCode"
+        case AlibcQdByHide = "AlibcQdByHide"
         case AlibcOpenURL = "AlibcOpenURL"
         case AlibcOpenCar = "AlibcOpenCar"
         case AlibcOpenDetail = "AlibcOpenDetail"

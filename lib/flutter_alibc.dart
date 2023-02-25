@@ -18,6 +18,7 @@ class FlutterAlibc {
     CallBackType.AlibcTaobaoLogin: null,
     CallBackType.AlibcTaokeLogin: null,
     CallBackType.AlibcTaokeLoginForCode: null,
+    CallBackType.AlibcQdByHide: null,
     CallBackType.AlibcOpenURL: null,
     CallBackType.AlibcOpenCar: null,
     CallBackType.AlibcOpenDetail: null,
@@ -131,6 +132,30 @@ class FlutterAlibc {
     _callBackMaps[CallBackType.AlibcTaokeLoginForCode] = taokeCallback;
   }
 
+  static void qdByHide({
+    required String url,
+    AlibcOpenType openType = AlibcOpenType.AlibcOpenTypeAuto,
+    bool isNeedCustomNativeFailMode = false,
+    AlibcNativeFailMode nativeFailMode =
+        AlibcNativeFailMode.AlibcNativeFailModeNone,
+    AlibcSchemeType schemeType = AlibcSchemeType.AlibcSchemeTaoBao,
+    TaokeParams? taokeParams,
+    String? backUrl,
+    required CommonCallback taokeCallback,
+  }) async {
+    Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _channel.invokeMethod("qdByHide", {
+      "url": url,
+      "openType": openType.index,
+      "isNeedCustomNativeFailMode": isNeedCustomNativeFailMode,
+      "nativeFailMode": nativeFailMode.index,
+      "schemeType": schemeType.index,
+      "taokeParams": taoKe,
+      "backUrl": backUrl
+    });
+    _callBackMaps[CallBackType.AlibcQdByHide] = taokeCallback;
+  }
+
   static Future<dynamic> _platformCallHandler(MethodCall call) async {
     var argu = call.arguments;
     print(
@@ -155,6 +180,10 @@ class FlutterAlibc {
         break;
       case CallBackType.AlibcTaokeLogin:
       case CallBackType.AlibcTaokeLoginForCode:
+        //暂时不转换类型
+        argu = temp;
+        break;
+      case CallBackType.AlibcQdByHide:
         //暂时不转换类型
         argu = temp;
         break;
