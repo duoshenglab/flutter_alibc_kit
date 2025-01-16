@@ -1,6 +1,5 @@
 package com.wxwx.flutter_alibc;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import android.app.Activity;
@@ -140,9 +139,9 @@ public class QdHideActivity extends Activity {
                         e.printStackTrace();
                     }
 
-                    if(FlutterAlibcHandle.Companion.getCallBack() != null) {
-                        FlutterAlibcHandle.Companion.getCallBack().success(str3);
-                    }
+//                    if(FlutterAlibcHandle.getCallBack() != null) {
+//                        FlutterAlibcHandle.getCallBack().success(str3);
+//                    }
 
 //                    AlibcsdkWXModule.onRegisterClientCallBack.invokeAndKeepAlive(jSONObject);
 //                    if (qdHideActivity.callBack != null) {
@@ -166,9 +165,9 @@ public class QdHideActivity extends Activity {
                         e2.printStackTrace();
                     }
 
-                    if(FlutterAlibcHandle.Companion.getCallBack() != null) {
-                        FlutterAlibcHandle.Companion.getCallBack().success(jSONObject2.toJSONString());
-                    }
+//                    if(FlutterAlibcHandle.getCallBack() != null) {
+//                        FlutterAlibcHandle.getCallBack().success(jSONObject2.toJSONString());
+//                    }
 //                    AlibcsdkWXModule.onRegisterClientCallBack.invokeAndKeepAlive(jSONObject2);
 //                    if (qdHideActivity.callBack != null) {
 //                        qdHideActivity.callBack.success(accessToken);
