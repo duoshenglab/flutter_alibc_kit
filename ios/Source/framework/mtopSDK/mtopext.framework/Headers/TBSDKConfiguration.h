@@ -23,17 +23,17 @@ typedef NS_ENUM(NSUInteger,TBSDKEnvironment) {
     /**
      * 正式环境
      */
-    TBSDKEnvironmentRelease = 0,
+    TBSDKEnvironmentRelease = 4,
     
     /**
      * 预发环境
      */
-    TBSDKEnvironmentDebug,
+    TBSDKEnvironmentDebug = 1,
     
     /**
      * 日常环境
      */
-    TBSDKEnvironmentDaily,
+    TBSDKEnvironmentDaily = 2,
     
     /**
      * 日常二套环境(废弃)

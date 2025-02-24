@@ -50,6 +50,11 @@ extern int const OPEN_SECURITYBODY_FLAG_FORMAT_GENERAL_MTOP;
  */
 extern int const OPEN_SECURITYBODY_FLAG_FORMAT_MINI_MTOP;
 
+///**
+// *  alipay 人机格式
+// */
+//extern int const OPEN_SECURITYBODY_FLAG_FORMAT_ALIPAY;
+
 /**
  *  使用 白盒加密人机数据，没有特别需求不要指定
  */

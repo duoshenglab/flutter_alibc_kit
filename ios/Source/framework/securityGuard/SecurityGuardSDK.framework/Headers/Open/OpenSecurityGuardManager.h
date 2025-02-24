@@ -161,6 +161,18 @@ typedef enum {
                                     error: (NSError * __autoreleasing *)error;
 
 /**
+ *  获取SecurityGuardManager单例对象
+ *
+ *  @param authCode 初始化传入authcode
+ *  @param customBundlePath 初始化传入自定义BundlePath
+ *
+ *  @return SecurityGuardManager单例对象
+ */
++ (OpenSecurityGuardManager*) getInstance: (NSString *)authCode
+                     withCustomBundlePath: (NSString *)customBundlePath
+                                    error: (NSError * __autoreleasing *)error;
+
+/**
  *  获取安全签名接口
  *
  *  @return 返回签名接口，失败时nil

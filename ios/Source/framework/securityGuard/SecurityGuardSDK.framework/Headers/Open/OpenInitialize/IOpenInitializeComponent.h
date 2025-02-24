@@ -28,7 +28,8 @@
  */
 - (NSInteger) initialize: (void *)authCode;
 
-
+- (NSInteger) initialize: (void *)authCode
+    withCustomBundlePath:(NSString*) customBundlePath;
 @end
 
 

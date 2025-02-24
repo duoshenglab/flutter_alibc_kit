@@ -13,6 +13,8 @@
 #import <mtopext/MtopExtRequestDelegate.h>
 #import <mtopext/MtopAuthProtocol.h>
 #import <mtopext/TBSDKUTUtility.h>
+#import <mtopext/TBSDKAccountInfo.h>
+#import <mtopext/MTopPrefetch.h>
 
 @class TBSDKRequest;
 
@@ -289,6 +291,12 @@ typedef NS_ENUM(NSUInteger,MtopUnitStrategy) {
  * 是否使用主线程回调。YES: 不从主线程回调, NO: 从主线程回调。
  */
 @property(nonatomic, assign) BOOL isNotUseMainThreadCallback;
+
+
+/**
+ * 预取优化参数配置。
+ */
+@property(strong, nonatomic) MTopPrefetch *prefetch;
 
 
 /**

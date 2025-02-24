@@ -72,6 +72,15 @@
  */
 - (NSData*) dynamicDecryptByteArrayDDp: (NSData*) cipherByteArray;
 
+
+/**
+     * 判断是否有数据校验功能，避免异常数据解密输出错误结果
+     * @param cipherText 需要判断的密文字符串
+     * @return 是否是具有校验的密文格式
+     */
+- (BOOL) isVerifyCrypt: (NSString*) cipherText;
+
+
 @end
 
 #endif

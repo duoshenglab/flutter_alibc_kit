@@ -11,7 +11,7 @@
 #import <mtopext/Constants.h>
 #import <mtopext/MtopError.h>
 #import <mtopext/MtopExtRequest.h>
-
+#import <mtopext/TBSDKCacheStorage.h>
 
 @interface MtopExtResponse : NSObject
 
@@ -74,7 +74,7 @@
  * @return
  *              MtopExtResponse
  */
-// - (MtopExtResponse*) initWithCacheObject: (TBSDKCacheObject*) co request: (MtopExtRequest*) request;
+ - (MtopExtResponse*) initWithCacheObject: (TBSDKCacheObject*) co request: (MtopExtRequest*) request;
 
 /*!
  * 将另外一个MtopExtResponse的属性复制到本MtopExtResponse

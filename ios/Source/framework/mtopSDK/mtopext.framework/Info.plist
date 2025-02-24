@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BuildMachineOSBuild</key>
-	<string>18A391</string>
+	<string>17G65</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleName</key>
 	<string>mtopext</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.0.0.0-SNAPSHOT</string>
+	<string>3.0.0.6-mix-SNAPSHOT</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleSupportedPlatforms</key>

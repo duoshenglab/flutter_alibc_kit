@@ -39,8 +39,6 @@
 #import <SGMain/ISecurityGuardOpenUMID.h>
 #import <SGMain/ISecurityGuardOpenStaticKeyEncrypt.h>
 #import <SGMain/ISecurityGuardOpenOpenSDK.h>
-#import <SGMain/ISecurityGuardOpenLiteVMService.h>
-
 
 
 #endif /* SGMain_h */

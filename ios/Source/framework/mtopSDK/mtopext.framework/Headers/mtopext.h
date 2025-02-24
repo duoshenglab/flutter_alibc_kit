@@ -29,5 +29,10 @@
 #import <mtopext/MtopExtRequestHelper.h>
 #import <mtopext/MtopExtAppMonitorProtocol.h>
 #import <mtopext/FilterManagerProtocol.h>
+#import <mtopext/CacheService.h>
+#import <mtopext/TBSDKCacheHelper.h>
+#import <mtopext/TBSDKCacheStorage.h>
+#import <mtopext/MTopPrefetch.h>
+#import <mtopext/PrefetchService.h>
 
 #endif /* mtopext_h */
