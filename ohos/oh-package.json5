@@ -1,0 +1,9 @@
+{
+  "name": "flutter_alibc",
+  "version": "1.0.0",
+  "main": "index.ets",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./libs/flutter.har",
+    "@ohos/alibc": "file:./libs/alibc-default.tgz"
+  }
+}

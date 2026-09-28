@@ -7,3 +7,10 @@
 build/
 .idea
 *.iml
+
+# HarmonyOS build outputs and machine-specific dependency lock
+ohos/build/
+ohos/oh_modules/
+ohos/BuildProfile.ets
+ohos/oh-package-lock.json5
+example/ios/Flutter/ephemeral/

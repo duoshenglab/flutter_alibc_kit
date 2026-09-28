@@ -24,6 +24,14 @@ class AlibcTools {
       );
     }
 
+    // HarmonyOS openByUrl reports launch success without a trade payload.
+    if (result[AlibcConstKey.data] is! Map) {
+      return TradeResult(
+        result[AlibcConstKey.errorCode],
+        result[AlibcConstKey.errorMessage],
+      );
+    }
+
     // 判断类型
     if (result[AlibcConstKey.data]["type"] ==
         TradeResultType.AlibcTradeResultTypePaySuccess) {

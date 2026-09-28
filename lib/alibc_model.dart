@@ -1,6 +1,33 @@
 // 初始化阿里百川的model
 import 'alibc_const_key.dart';
 
+/// HarmonyOS 百川授权结果。成功时返回 accessToken 和 expireTime，不返回 code。
+class AlibcAuthorizationResult {
+  final String errorCode;
+  final String errorMessage;
+  final String? accessToken;
+  final String? expireTime;
+
+  const AlibcAuthorizationResult({
+    required this.errorCode,
+    required this.errorMessage,
+    this.accessToken,
+    this.expireTime,
+  });
+
+  bool get isSuccess => errorCode == '0' && accessToken != null;
+
+  factory AlibcAuthorizationResult.fromMap(Map<dynamic, dynamic> map) {
+    final data = map['data'];
+    return AlibcAuthorizationResult(
+      errorCode: map['errorCode']?.toString() ?? 'UNKNOWN',
+      errorMessage: map['errorMessage']?.toString() ?? '',
+      accessToken: data is Map ? data['accessToken'] as String? : null,
+      expireTime: data is Map ? data['expireTime'] as String? : null,
+    );
+  }
+}
+
 class InitModel {
   // 错误码
   String? errorCode;

@@ -1,10 +1,10 @@
 name: flutter_alibc
 description: Flutter版本的阿里百川，android V4.1.0.1 && ios V4.1.0.0
 version: 1.0.0-nullsafety
-homepage: https://github.com/flutterbest/flutter_alibc_kit.git
+homepage: https://github.com/duoshenglab/flutter_alibc_kit
 
 environment:
-  sdk: '>=2.12.0 <3.0.0'
+  sdk: '>=2.12.0 <4.0.0'
   flutter: ">=1.20.0"
 
 dependencies:
@@ -31,6 +31,9 @@ flutter:
         package: com.wxwx.flutter_alibc
         pluginClass: FlutterAlibcPlugin
       ios:
+        pluginClass: FlutterAlibcPlugin
+      ohos:
+        package: flutter_alibc
         pluginClass: FlutterAlibcPlugin
 
   # To add assets to your plugin package, add an assets section, like this:

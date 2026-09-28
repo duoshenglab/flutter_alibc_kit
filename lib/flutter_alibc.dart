@@ -44,14 +44,22 @@ class FlutterAlibc {
         result[AlibcConstKey.errorCode], result[AlibcConstKey.errorMessage]);
   }
 
+  /// HarmonyOS 百川授权。先调用 [initAlibc]；成功返回 accessToken 和 expireTime。
+  /// SDK 不提供授权 code，appKey 由鸿蒙安全图片通过 Alibc.getAppKey() 获取。
+  static Future<AlibcAuthorizationResult> authorize({required String appName}) async {
+    final Map<dynamic, dynamic> result = await _channel.invokeMethod(
+      'authorize', {'appName': appName});
+    return AlibcAuthorizationResult.fromMap(result);
+  }
+
   ///
   /// @description: 登录淘宝
   ///
   /// @return: 成功则返回的data为用户信息，失败则没有data
   ///
   static void loginTaoBao({required LoginCallback loginCallback}) async {
-    _channel.invokeMethod("loginTaoBao");
     _callBackMaps[CallBackType.AlibcTaobaoLogin] = loginCallback;
+    _channel.invokeMethod("loginTaoBao");
     // 判断成功还是失败
   }
 
@@ -81,6 +89,7 @@ class FlutterAlibc {
       String? backUrl,
       required CommonCallback taokeCallback}) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcTaokeLogin] = taokeCallback;
     _channel.invokeMethod("taoKeLogin", {
       "url": url,
       "openType": openType.index,
@@ -90,7 +99,6 @@ class FlutterAlibc {
       "taokeParams": taoKe,
       "backUrl": backUrl,
     });
-    _callBackMaps[CallBackType.AlibcTaokeLogin] = taokeCallback;
   }
 
   ///
@@ -120,6 +128,7 @@ class FlutterAlibc {
     required CommonCallback taokeCallback,
   }) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcTaokeLoginForCode] = taokeCallback;
     _channel.invokeMethod("taoKeLoginForCode", {
       "url": url,
       "openType": openType.index,
@@ -129,7 +138,6 @@ class FlutterAlibc {
       "taokeParams": taoKe,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcTaokeLoginForCode] = taokeCallback;
   }
 
   static void qdByHide({
@@ -144,6 +152,7 @@ class FlutterAlibc {
     required CommonCallback taokeCallback,
   }) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcQdByHide] = taokeCallback;
     _channel.invokeMethod("qdByHide", {
       "url": url,
       "openType": openType.index,
@@ -153,7 +162,6 @@ class FlutterAlibc {
       "taokeParams": taoKe,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcQdByHide] = taokeCallback;
   }
 
   static Future<dynamic> _platformCallHandler(MethodCall call) async {
@@ -168,15 +176,15 @@ class FlutterAlibc {
     });
     switch (type) {
       case CallBackType.AlibcTaobaoLogin:
+        final user = argu[AlibcConstKey.data];
         argu = LoginModel(
             argu[AlibcConstKey.errorCode], argu[AlibcConstKey.errorMessage],
-            data: UserModel(
-                argu[AlibcConstKey.data]["nick"],
-                argu[AlibcConstKey.data]["avatarUrl"],
-                argu[AlibcConstKey.data]["openId"],
-                argu[AlibcConstKey.data]["openSid"],
-                argu[AlibcConstKey.data]["topAccessToken"],
-                argu[AlibcConstKey.data]["topAuthCode"]));
+            data: user is Map
+                ? UserModel(
+                    user["nick"], user["avatarUrl"], user["openId"],
+                    user["openSid"], user["topAccessToken"],
+                    user["topAuthCode"])
+                : null);
         break;
       case CallBackType.AlibcTaokeLogin:
       case CallBackType.AlibcTaokeLoginForCode:
@@ -229,6 +237,7 @@ class FlutterAlibc {
     OpenCallback? callback,
   }) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcOpenURL] = callback;
     _channel.invokeMethod("openByUrl", {
       "url": url,
       "openType": openType.index,
@@ -238,7 +247,6 @@ class FlutterAlibc {
       "taokeParams": taoKe,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcOpenURL] = callback;
   }
 
   ///
@@ -264,6 +272,7 @@ class FlutterAlibc {
       String? backUrl,
       OpenCallback? callback}) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcOpenDetail] = callback;
     _channel.invokeMethod("openItemDetail", {
       "itemID": itemID,
       // "isNeedPush": isNeedPush,
@@ -275,7 +284,6 @@ class FlutterAlibc {
       "trackParam": trackParam,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcOpenDetail] = callback;
   }
 
   ///
@@ -299,6 +307,7 @@ class FlutterAlibc {
       String? backUrl,
       OpenCallback? callback}) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcOpenShop] = callback;
 
     _channel.invokeMethod("openShop", {
       "shopId": shopId,
@@ -311,7 +320,6 @@ class FlutterAlibc {
       "trackParam": trackParam,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcOpenShop] = callback;
   }
 
   ///
@@ -334,6 +342,7 @@ class FlutterAlibc {
       String? backUrl,
       OpenCallback? callback}) async {
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
+    _callBackMaps[CallBackType.AlibcOpenCar] = callback;
 
     _channel.invokeMethod("openCart", {
       // "isNeedPush": isNeedPush,
@@ -345,7 +354,6 @@ class FlutterAlibc {
       "trackParam": trackParam,
       "backUrl": backUrl
     });
-    _callBackMaps[CallBackType.AlibcOpenCar] = callback;
   }
 
   // 是否需要设置打点
