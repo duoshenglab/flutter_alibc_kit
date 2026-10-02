@@ -97,7 +97,7 @@ export default class FlutterAlibcPlugin implements FlutterPlugin, AbilityAware, 
         }
         Alibc.authorize({
           appName,
-          appLogoSrc: $r('app.media.icon'),
+          appLogoSrc: $r('app.media.duosheng_auth_logo'),
           appKey: '29134108',
           onSuccess: (params) => result.success({
             'errorCode': '0',

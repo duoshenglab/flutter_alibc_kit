@@ -16,7 +16,7 @@
 #ifndef AlibcTradeBizSDK_h
 #define AlibcTradeBizSDK_h
 
-#define AlibcTradeBizSDKVersion @"4.1.0.4"
+#define AlibcTradeBizSDKVersion @"4.1.0.5"
 
 
 @interface AlibcTradeBizSDK : NSObject

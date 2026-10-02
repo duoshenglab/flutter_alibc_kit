@@ -158,27 +158,21 @@ public class FlutterAlibcHandle {
     }
 
     public void qdByHide(final MethodCall call) {
-        if (!AlibcLogin.getInstance().isLogin()) {
-            return;
-        }
-        callBack = new CallBack() {
-            @Override
-            public void success(String code) {
-                Map<String, Object> resMap = new HashMap<>();
-                resMap.put("code", code);
-                methodChannel.invokeMethod("AlibcQdByHide", PluginResponse.success(resMap).toMap());
-            }
-
-            @Override
-            public void failed(String errorMsg) {
-                methodChannel.invokeMethod("AlibcQdByHide", new PluginResponse("-1", errorMsg, null).toMap());
+        QdHideActivity.Callback callback = (code, message, data) -> {
+            if (methodChannel != null) {
+                methodChannel.invokeMethod("AlibcQdByHide", new PluginResponse(code, message, data).toMap());
             }
         };
-
+        if (activity == null || activity.isFinishing()) {
+            callback.complete("NO_ACTIVITY", "当前 Activity 不可用", null);
+            return;
+        }
+        if (!AlibcLogin.getInstance().isLogin()) {
+            callback.complete("NOT_LOGGED_IN", "请先调用 loginTaoBao 完成手淘登录", null);
+            return;
+        }
         String url = call.argument("url");
-        Intent intent = new Intent(activity, QdHideActivity.class);
-        intent.putExtra("url", url);
-        activity.startActivity(intent);
+        QdHideActivity.start(activity, url, callback);
     }
 
     public void openByUrl(final MethodCall call, final MethodChannel.Result result) {

@@ -14,6 +14,8 @@ class FlutterAlibc {
   static final MethodChannel _channel = const MethodChannel("flutter_alibc")
     ..setMethodCallHandler(_platformCallHandler);
 
+  static bool _qdPending = false;
+
   static Map<CallBackType, Function?> _callBackMaps = {
     CallBackType.AlibcTaobaoLogin: null,
     CallBackType.AlibcTaokeLogin: null,
@@ -140,6 +142,10 @@ class FlutterAlibc {
     });
   }
 
+  /// Android/iOS 渠道备案：先完成 loginTaoBao，再加载淘宝 OAuth URL。
+  /// 在授权确认页自动提交授权；登录失效或需要额外交互时可能失败或超时。
+  /// 成功 data 包含 code 或 access_token；失败返回 errorCode/errorMessage。
+  /// 最长等待 30 秒；此流程固定使用 Auto 打开方式，不保证服务端免交互。
   static void qdByHide({
     required String url,
     AlibcOpenType openType = AlibcOpenType.AlibcOpenTypeAuto,
@@ -151,23 +157,43 @@ class FlutterAlibc {
     String? backUrl,
     required CommonCallback taokeCallback,
   }) async {
+    if (_qdPending) {
+      taokeCallback(
+          {'errorCode': 'BUSY', 'errorMessage': '已有渠道授权正在进行', 'data': null});
+      return;
+    }
+    _qdPending = true;
     Map? taoKe = AlibcTools.getTaokeMap(taokeParams);
     _callBackMaps[CallBackType.AlibcQdByHide] = taokeCallback;
-    _channel.invokeMethod("qdByHide", {
-      "url": url,
-      "openType": openType.index,
-      "isNeedCustomNativeFailMode": isNeedCustomNativeFailMode,
-      "nativeFailMode": nativeFailMode.index,
-      "schemeType": schemeType.index,
-      "taokeParams": taoKe,
-      "backUrl": backUrl
-    });
+    try {
+      await _channel.invokeMethod("qdByHide", {
+        "url": url,
+        "openType": openType.index,
+        "isNeedCustomNativeFailMode": isNeedCustomNativeFailMode,
+        "nativeFailMode": nativeFailMode.index,
+        "schemeType": schemeType.index,
+        "taokeParams": taoKe,
+        "backUrl": backUrl
+      });
+    } catch (error) {
+      if (_qdPending) {
+        _qdPending = false;
+        _callBackMaps[CallBackType.AlibcQdByHide] = null;
+        taokeCallback({
+          'errorCode': 'PLATFORM_ERROR',
+          'errorMessage': error.toString(),
+          'data': null
+        });
+      }
+    }
   }
 
   static Future<dynamic> _platformCallHandler(MethodCall call) async {
     var argu = call.arguments;
-    print(
-        'call.name ${call.method}  call.arguments ${call.arguments.toString()}');
+    if (call.method != 'AlibcQdByHide') {
+      print(
+          'call.name ${call.method}  call.arguments ${call.arguments.toString()}');
+    }
     CallBackType? type = enumFromString(CallBackType.values, call.method);
     print(argu.runtimeType.toString());
     var temp = Map<String, dynamic>();
@@ -205,6 +231,13 @@ class FlutterAlibc {
       default:
         print("unsupport method handler");
         return;
+    }
+    if (type == CallBackType.AlibcQdByHide) {
+      _qdPending = false;
+      final callback = _callBackMaps[type];
+      _callBackMaps[type!] = null;
+      callback?.call(argu);
+      return;
     }
     Function? f = _callBackMaps[type];
     if (f != null) {

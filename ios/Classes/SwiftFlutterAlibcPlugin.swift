@@ -7,7 +7,7 @@ public class SwiftFlutterAlibcPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "flutter_alibc", binaryMessenger: registrar.messenger())
         let instance = SwiftFlutterAlibcPlugin()
-        instance.alibchandler = FlutterAlibcHandle(channel: channel)
+        instance.alibchandler = FlutterAlibcHandle(channel: channel, viewControllerProvider: { [weak registrar] in registrar?.viewController })
         
         registrar.addMethodCallDelegate(instance, channel: channel)
         registrar.addApplicationDelegate(instance)
@@ -27,6 +27,8 @@ public class SwiftFlutterAlibcPlugin: NSObject, FlutterPlugin {
             alibchandler?.loginOut(call: call, result: result)
         } else if call.method == "taoKeLoginForCode" {
             alibchandler?.openByAsyncWebView(call: call, result: result, callBackString: FlutterAlibcConstKey.CallBackString.AlibcTaokeLoginForCode.rawValue)
+        } else if call.method == "qdByHide" {
+            alibchandler?.qdByHide(call: call, result: result)
         } else if call.method == "openByUrl" {
             alibchandler?.openByUrl(call: call, result: result, callBackString: FlutterAlibcConstKey.CallBackString.AlibcOpenURL.rawValue)
         } else if call.method == "openItemDetail"{

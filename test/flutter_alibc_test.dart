@@ -6,7 +6,8 @@ import 'package:flutter_alibc/alibc_model.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('flutter_alibc');
-  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   setUp(() {
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -56,10 +57,12 @@ void main() {
   });
 
   test('authorize exposes SDK failure without a token', () async {
-    messenger.setMockMethodCallHandler(channel, (call) async => {
-      'errorCode': '1001',
-      'errorMessage': 'cancelled',
-    });
+    messenger.setMockMethodCallHandler(
+        channel,
+        (call) async => {
+              'errorCode': '1001',
+              'errorMessage': 'cancelled',
+            });
     final result = await FlutterAlibc.authorize(appName: '多省严选h');
     expect(result.isSuccess, isFalse);
     expect(result.errorCode, '1001');
@@ -82,5 +85,37 @@ void main() {
       (_) {},
     );
     expect(received?.errorCode, '0');
+  });
+  test('qdByHide rejects a concurrent call without losing the first callback',
+      () async {
+    Map<String, dynamic>? first;
+    Map<String, dynamic>? second;
+    FlutterAlibc.qdByHide(
+        url: 'https://oauth.m.taobao.com/authorize',
+        taokeCallback: (v) => first = v);
+    FlutterAlibc.qdByHide(
+        url: 'https://oauth.m.taobao.com/authorize',
+        taokeCallback: (v) => second = v);
+    expect(second?['errorCode'], 'BUSY');
+    await messenger.handlePlatformMessage(
+        'flutter_alibc',
+        const StandardMethodCodec()
+            .encodeMethodCall(const MethodCall('AlibcQdByHide', {
+          'errorCode': '0',
+          'data': {'access_token': 'test-token'}
+        })),
+        (_) {});
+    expect(first?['data']['access_token'], 'test-token');
+  });
+
+  test('qdByHide reports missing platform implementation', () async {
+    messenger.setMockMethodCallHandler(
+        channel, (call) async => throw MissingPluginException());
+    Map<String, dynamic>? received;
+    FlutterAlibc.qdByHide(
+        url: 'https://oauth.m.taobao.com/authorize',
+        taokeCallback: (v) => received = v);
+    await Future<void>.delayed(Duration.zero);
+    expect(received?['errorCode'], 'PLATFORM_ERROR');
   });
 }

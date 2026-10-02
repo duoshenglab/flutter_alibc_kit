@@ -46,7 +46,8 @@ class AlibcWkWebView: UIViewController{
         doneBtn.addTarget(self, action: #selector(doneBtnAction), for: UIControl.Event.touchUpInside)
         self.navigationItem.rightBarButtonItem =  UIBarButtonItem(customView: doneBtn)
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem.init(customView:doneBtn);
+        // A custom view must belong to only one bar item. Reusing doneBtn on
+        // both sides can keep UIKit's navigation bar layout from completing.
         
         //        UIBarButtonItem.appearance().setTitlePositionAdjustment(UIOffset(horizontal: 0,vertical: -60), for: .default)
         //添加wkwebview

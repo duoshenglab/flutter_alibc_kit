@@ -5,6 +5,9 @@
     <application>
         <activity
             android:name=".QdHideActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
         <activity android:name=".web.WebViewActivity"
             android:exported="false" />

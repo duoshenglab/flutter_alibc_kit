@@ -46,12 +46,92 @@ class FlutterAlibcHandle: NSObject, AlibcWkWebViewDelegate {
     }
     
     var channel : FlutterMethodChannel? = nil;
-    
-    init(channel:FlutterMethodChannel) {
+    private var qdWebView: AlibcQdWebView?
+    private var qdStarting = false
+    private var qdStartWork: DispatchWorkItem?
+    private let viewControllerProvider: () -> UIViewController?
+
+    public func qdByHide(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard qdWebView == nil && !qdStarting else {
+            result(FlutterError(code: "BUSY", message: "已有渠道授权正在进行", details: nil))
+            return
+        }
+        do { _ = try QdOAuthRequest(getStringFromCall(key: "url", call: call)) }
+        catch {
+            result(FlutterError(code: "INVALID_URL", message: "渠道授权 URL 参数无效", details: nil))
+            return
+        }
+        qdStarting = true
+        result(nil)
+        startQdWhenReady(call: call, deadline: Date().addingTimeInterval(5))
+    }
+
+    private func qdParent() -> UIViewController? {
+        let flutterController = viewControllerProvider()
+        var window = flutterController?.viewIfLoaded?.window
+        if window == nil {
+            let windows: [UIWindow]
+            if #available(iOS 13.0, *) {
+                windows = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+                    .sorted { $0.activationState == .foregroundActive && $1.activationState != .foregroundActive }
+                    .flatMap { $0.windows }
+            } else { windows = UIApplication.shared.windows }
+            window = windows.first { $0.isKeyWindow && !$0.isHidden && $0.rootViewController != nil }
+                ?? windows.first { !$0.isHidden && $0.windowLevel == .normal && $0.rootViewController != nil }
+        }
+        guard let targetWindow = window, !targetWindow.isHidden else { return nil }
+        if #available(iOS 13.0, *), let scene = targetWindow.windowScene {
+            guard scene.activationState == .foregroundActive else { return nil }
+        }
+        guard UIApplication.shared.applicationState == .active,
+              var parent = targetWindow.rootViewController else { return nil }
+        while let presented = parent.presentedViewController { parent = presented }
+        guard !parent.isBeingDismissed, !parent.isBeingPresented,
+              parent.transitionCoordinator == nil else { return nil }
+        return parent
+    }
+
+    private func startQdWhenReady(call: FlutterMethodCall, deadline: Date) {
+        guard qdStarting else { return }
+        guard let parent = qdParent() else {
+            if Date() >= deadline {
+                finishQd(code: "NO_WINDOW", message: "等待应用恢复前台后仍找不到授权窗口", data: nil)
+                return
+            }
+            let work = DispatchWorkItem { [weak self] in self?.startQdWhenReady(call: call, deadline: deadline) }
+            qdStartWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: work)
+            return
+        }
+        qdStartWork = nil
+        do {
+            let controller = try AlibcQdWebView(url: getStringFromCall(key: "url", call: call)) { [weak self] code, message, data in
+                self?.finishQd(code: code, message: message, data: data)
+            }
+            qdWebView = controller
+            qdStarting = false
+            controller.start(parent: parent, backURL: getStringFromCall(key: "backUrl", call: call))
+        } catch { finishQd(code: "INVALID_URL", message: "渠道授权 URL 参数无效", data: nil) }
+    }
+
+    private func finishQd(code: String, message: String, data: [String: String]?) {
+        guard qdStarting || qdWebView != nil else { return }
+        qdStartWork?.cancel()
+        qdStartWork = nil
+        qdStarting = false
+        qdWebView = nil
+        channel?.invokeMethod(FlutterAlibcConstKey.CallBackString.AlibcQdByHide.rawValue,
+            arguments: ["errorCode": code, "errorMessage": message, "data": data as Any? ?? NSNull()])
+    }
+
+    init(channel: FlutterMethodChannel, viewControllerProvider: @escaping () -> UIViewController? = { nil }) {
+        self.viewControllerProvider = viewControllerProvider
         super.init()
         self.channel = channel
     }
-    
+
     //    MARK: - 对flutter暴露的方法
     
     //    MARK:  初始化阿里百川
@@ -128,6 +208,8 @@ class FlutterAlibcHandle: NSObject, AlibcWkWebViewDelegate {
     
     //    MARK:  退出登陆
     public func loginOut(call : FlutterMethodCall , result : @escaping FlutterResult){
+        if qdStarting { finishQd(code: "CANCELLED", message: "渠道授权已取消", data: nil) }
+        qdWebView?.cancel()
         ALBBSDK.sharedInstance()?.logout()
     }
     

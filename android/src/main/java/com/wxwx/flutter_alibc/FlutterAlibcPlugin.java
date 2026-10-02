@@ -41,6 +41,7 @@ public class FlutterAlibcPlugin implements FlutterPlugin, MethodCallHandler, Act
       handle.logoutTaoBao(result);
     } else if (call.method.equals("qdByHide")) {
       handle.qdByHide(call);
+      result.success(null);
     } else if (call.method.equals("openByUrl")) {
       handle.openByUrl(call, result);
     } else if (call.method.equals("openShop")) {

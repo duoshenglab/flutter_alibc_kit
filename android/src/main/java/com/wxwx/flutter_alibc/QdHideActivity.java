@@ -1,238 +1,193 @@
 package com.wxwx.flutter_alibc;
 
-import androidx.core.app.NotificationCompat;
-
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.WindowManager;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.ImageButton;
-import android.widget.TextView;
+import android.widget.FrameLayout;
 
-import com.ali.auth.third.login.LoginConstants;
 import com.alibaba.baichuan.android.trade.AlibcTrade;
 import com.alibaba.baichuan.android.trade.model.AlibcShowParams;
 import com.alibaba.baichuan.android.trade.model.OpenType;
 import com.alibaba.baichuan.trade.biz.AlibcTradeCallback;
 import com.alibaba.baichuan.trade.biz.context.AlibcTradeResult;
 import com.alibaba.baichuan.trade.biz.core.taoke.AlibcTaokeParams;
-import com.alibaba.baichuan.trade.common.utils.AlibcLogger;
-import com.alibaba.fastjson.JSONException;
-import com.alibaba.fastjson.JSONObject;
 
-import java.io.PrintStream;
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
+/** Keeps an authenticated Baichuan WebView alive until an OAuth result or timeout. */
 public class QdHideActivity extends Activity {
-    private List<String> loadHistoryUrls = new ArrayList();
+    interface Callback {
+        void complete(String code, String message, Map<String, String> data);
+    }
+    private static final class Pending {
+        final String id = UUID.randomUUID().toString();
+        final String url;
+        final Callback callback;
+        Pending(String url, Callback callback) { this.url = url; this.callback = callback; }
+    }
+    private static Pending pending;
+    private Pending request;
+    private QdOAuthRequest oauth;
     private WebView webView;
+    private String authorizeScript;
+    private boolean completed;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable timeout = () -> complete("TIMEOUT", "渠道授权超时，请使用可见授权流程重试", null);
 
-    @Override // android.app.Activity
-    protected void onCreate(Bundle bundle) {
-        getWindow().addFlags(67108864);
-        Log.i("SimpleComponentHolder", "openUrlByqd: fdsescc bdf");
-        super.onCreate(bundle);
-        Log.i("SimpleComponentHolder", "openUrlByqd: sdfdsfassfsdfsd bdf");
-        requestWindowFeature(1);
-        setContentView(R.layout.activity_qd_hide);
-        Intent intent = getIntent();
-        Log.i("SimpleComponentHolder", "openUrlByqd: sdfdsfassfsdfsd bdf");
-        if (intent != null) {
-            String stringExtra = intent.getStringExtra("url");
-            WebView webView = (WebView) findViewById(R.id.webview);
-            this.webView = webView;
-            webView.getSettings().setJavaScriptEnabled(true);
-            this.webView.getSettings().setDomStorageEnabled(true);
-            ((TextView) findViewById(R.id.sdk_closed)).setOnClickListener(new View.OnClickListener() { // from class: com.uzk.UZKAlibcsdk.qdHideActivity.1
-                @Override // android.view.View.OnClickListener
-                public void onClick(View view) {
-                    QdHideActivity.this.finish();
-                }
-            });
-            ((ImageButton) findViewById(R.id.sdk_back)).setOnClickListener(new View.OnClickListener() { // from class: com.uzk.UZKAlibcsdk.qdHideActivity.2
-                @Override // android.view.View.OnClickListener
-                public void onClick(View view) {
-                    if (QdHideActivity.this.webView.canGoBack()) {
-                        if (QdHideActivity.this.loadHistoryUrls.size() > 1) {
-                            String str = (String) QdHideActivity.this.loadHistoryUrls.get(QdHideActivity.this.loadHistoryUrls.size() - 2);
-                            QdHideActivity.this.loadHistoryUrls.remove(QdHideActivity.this.loadHistoryUrls.size() - 1);
-                            if (QdHideActivity.this.loadHistoryUrls.size() > 0) {
-                                QdHideActivity.this.loadHistoryUrls.remove(QdHideActivity.this.loadHistoryUrls.size() - 1);
-                            }
-                            QdHideActivity.this.webView.loadUrl(str);
-                        }
-                        QdHideActivity.this.webView.goBack();
-                        return;
-                    }
-                    QdHideActivity.this.finish();
-                }
-            });
-            openByUrl(stringExtra, this.webView);
-            ((TextView) findViewById(R.id.sdk_title)).setText("渠道备案");
+    static void start(Activity activity, String url, Callback callback) {
+        if (pending != null) {
+            callback.complete("BUSY", "已有渠道授权正在进行", null);
+            return;
         }
-    }
-
-    @Override // android.app.Activity
-    protected void onStart() {
-        super.onStart();
-        setVisible(true);
-    }
-
-    @Override // android.app.Activity
-    protected void onResume() {
-        super.onResume();
-    }
-
-    @Override // android.app.Activity
-    protected void onPause() {
-        super.onPause();
-        finish();
-    }
-
-    /* JADX INFO: Access modifiers changed from: private */
-    public String getcode(String str) {
+        try { new QdOAuthRequest(url); }
+        catch (RuntimeException e) {
+            callback.complete("INVALID_URL", e.getMessage(), null);
+            return;
+        }
+        Pending next = new Pending(url, callback);
+        pending = next;
         try {
-            return str.substring(str.indexOf("code"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
+            activity.startActivity(new Intent(activity, QdHideActivity.class).putExtra("requestId", next.id));
+        } catch (RuntimeException e) {
+            pending = null;
+            callback.complete("START_FAILED", "无法打开渠道授权窗口", null);
         }
     }
 
-    /* JADX INFO: Access modifiers changed from: private */
-    public String getAccessToken(String str) {
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        request = pending;
+        if (request == null || !request.id.equals(getIntent().getStringExtra("requestId"))) {
+            request = null;
+            finish();
+            return;
+        }
+        oauth = new QdOAuthRequest(request.url);
+        getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        WindowManager.LayoutParams attributes = getWindow().getAttributes();
+        attributes.alpha = 0f;
+        getWindow().setAttributes(attributes);
+        webView = new WebView(this);
+        FrameLayout container = new FrameLayout(this);
+        container.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(container);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.getSettings().setAllowFileAccess(false);
+        webView.getSettings().setAllowContentAccess(false);
+        CookieManager.getInstance().setAcceptCookie(true);
+        if (android.os.Build.VERSION.SDK_INT >= 21)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+        handler.postDelayed(timeout, 30000);
         try {
-            String substring = str.substring(str.indexOf("access_token"));
-            PrintStream printStream = System.out;
-            printStream.println("获取到code：" + substring);
-            return substring;
+            try (InputStream input = getAssets().open("qd_authorize.js")) {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                byte[] bytes = new byte[4096];
+                int count;
+                while ((count = input.read(bytes)) != -1) buffer.write(bytes, 0, count);
+                authorizeScript = buffer.toString("UTF-8");
+            }
+            openByUrl();
         } catch (Exception e) {
-            e.printStackTrace();
-            return "";
+            complete("OPEN_FAILED", "无法加载渠道授权页面", null);
         }
     }
 
-    private void openByUrl(String str, WebView webView) {
-        AlibcShowParams alibcShowParams = new AlibcShowParams();
-        alibcShowParams.setOpenType(OpenType.Native);
-        alibcShowParams.setClientType("taobao");
-        alibcShowParams.setBackUrl("alisdk://");
-        AlibcTrade.openByUrl(this, "", str, webView, new WebViewClient() { // from class: com.uzk.UZKAlibcsdk.qdHideActivity.3
-            @Override // android.webkit.WebViewClient
-            public boolean shouldOverrideUrlLoading(WebView webView2, String str2) {
-                if (str2.contains("code=") || str2.contains("code=")) {
-                    String str3 = QdHideActivity.this.getcode(str2);
-                    PrintStream printStream = System.out;
-                    printStream.println("获取到code：" + str3);
-                    JSONObject jSONObject = new JSONObject();
-                    try {
-                        jSONObject.put("status", (Object) true);
-                        jSONObject.put("data", QdHideActivity.this.StringtoJson(str3));
-                        jSONObject.put(NotificationCompat.CATEGORY_MESSAGE, (Object) "获取数据成功");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-
-//                    if(FlutterAlibcHandle.getCallBack() != null) {
-//                        FlutterAlibcHandle.getCallBack().success(str3);
-//                    }
-
-//                    AlibcsdkWXModule.onRegisterClientCallBack.invokeAndKeepAlive(jSONObject);
-//                    if (qdHideActivity.callBack != null) {
-//                        qdHideActivity.callBack.success(str3);
-//                        CallBack unused = qdHideActivity.callBack = null;
-//                    }
-                    QdHideActivity.this.finish();
-                } else {
-                    System.out.println("没有获取到code");
-                }
-                if (str2.contains("access_token")) {
-                    String accessToken = QdHideActivity.this.getAccessToken(str2);
-                    PrintStream printStream2 = System.out;
-                    printStream2.println("获取到access_token：" + accessToken);
-                    JSONObject jSONObject2 = new JSONObject();
-                    try {
-                        jSONObject2.put("status", (Object) true);
-                        jSONObject2.put("data", QdHideActivity.this.StringtoJson(accessToken));
-                        jSONObject2.put(NotificationCompat.CATEGORY_MESSAGE, (Object) "获取数据成功");
-                    } catch (JSONException e2) {
-                        e2.printStackTrace();
-                    }
-
-//                    if(FlutterAlibcHandle.getCallBack() != null) {
-//                        FlutterAlibcHandle.getCallBack().success(jSONObject2.toJSONString());
-//                    }
-//                    AlibcsdkWXModule.onRegisterClientCallBack.invokeAndKeepAlive(jSONObject2);
-//                    if (qdHideActivity.callBack != null) {
-//                        qdHideActivity.callBack.success(accessToken);
-//                        CallBack unused2 = qdHideActivity.callBack = null;
-//                    }
-                    QdHideActivity.this.finish();
-                    return false;
-                }
-                System.out.println("没有获取到access_token");
-                return false;
-            }
-
-            @Override // android.webkit.WebViewClient
-            public void onLoadResource(WebView webView2, String str2) {
-                super.onLoadResource(webView2, str2);
-            }
-
-            @Override // android.webkit.WebViewClient
-            public void onPageFinished(WebView webView2, String str2) {
-                super.onPageFinished(webView2, str2);
-                webView2.loadUrl("javascript: document.getElementsByTagName('form')[0].submit();");
-                System.out.println(str2);
-            }
-        }, new WebChromeClient() { // from class: com.uzk.UZKAlibcsdk.qdHideActivity.4
-            @Override // android.webkit.WebChromeClient
-            public void onReceivedTitle(WebView webView2, String str2) {
-                super.onReceivedTitle(webView2, str2);
-                ((TextView) QdHideActivity.this.findViewById(R.id.sdk_title)).setText(str2);
-            }
-        }, alibcShowParams, new AlibcTaokeParams("", "", ""), new HashMap(), new AlibcTradeCallback() { // from class: com.uzk.UZKAlibcsdk.qdHideActivity.5
-            @Override // com.alibaba.baichuan.android.trade.callback.AlibcTradeCallback
-            public void onTradeSuccess(AlibcTradeResult alibcTradeResult) {
-                AlibcLogger.i("WebViewActivity", "request success");
-            }
-
-            @Override // com.alibaba.baichuan.android.trade.callback.AlibcTradeCallback
-            public void onFailure(int i, String str2) {
-                AlibcLogger.e("WebViewActivity", "code=" + i + ", msg=" + str2);
-            }
-        });
-        finish();
+    private boolean consume(String url) {
+        if (completed) return true;
+        try {
+            Map<String, String> data = oauth.readCallback(url);
+            if (data == null) return false;
+            if (data.containsKey("error")) complete("AUTH_DENIED", "淘宝渠道授权失败或被拒绝", null);
+            else complete("0", "成功", data);
+        } catch (IllegalArgumentException e) {
+            complete("INVALID_CALLBACK", "授权回调校验失败：" + e.getMessage(), null);
+        }
+        return true;
     }
 
-    @Override // android.app.Activity
-    protected void onDestroy() {
+    private void openByUrl() {
+        AlibcShowParams params = new AlibcShowParams();
+        params.setOpenType(OpenType.Auto);
+        params.setClientType("taobao");
+        AlibcTrade.openByUrl(this, "", request.url, webView, new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return consume(url);
+            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                return req.isForMainFrame() && consume(req.getUrl().toString());
+            }
+            @Override public void onPageStarted(WebView view, String url, Bitmap icon) {
+                if (consume(url)) view.stopLoading();
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                if (!consume(url)) view.evaluateJavascript(authorizeScript, null);
+            }
+            @Override public void onReceivedError(WebView view, int code, String description, String failingUrl) {
+                if (android.os.Build.VERSION.SDK_INT < 23)
+                    complete("LOAD_FAILED", "渠道授权页面加载失败", null);
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError error) {
+                if (req.isForMainFrame()) complete("LOAD_FAILED", "渠道授权页面加载失败", null);
+            }
+            @Override public void onReceivedHttpError(WebView view, WebResourceRequest req, WebResourceResponse response) {
+                if (req.isForMainFrame()) complete("HTTP_ERROR", "渠道授权页面 HTTP 错误", null);
+            }
+        }, new WebChromeClient(), params, new AlibcTaokeParams("", "", ""), new HashMap<>(),
+                new AlibcTradeCallback() {
+                    @Override public void onTradeSuccess(AlibcTradeResult result) {
+                        // SDK opening success is not an OAuth authorization result.
+                    }
+                    @Override public void onFailure(int code, String message) {
+                        complete(Integer.toString(code), "百川无法打开渠道授权页面", null);
+                    }
+                });
+    }
+
+    private void complete(String code, String message, Map<String, String> data) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            handler.post(() -> complete(code, message, data));
+            return;
+        }
+        if (completed || request == null) return;
+        completed = true;
+        handler.removeCallbacks(timeout);
+        if (pending == request) pending = null;
+        try { request.callback.complete(code, message, data); }
+        finally { finish(); }
+    }
+
+    @Override public void onBackPressed() { complete("CANCELLED", "渠道授权已取消", null); }
+
+    @Override protected void onDestroy() {
+        complete("CANCELLED", "渠道授权窗口已关闭", null);
+        handler.removeCallbacksAndMessages(null);
+        if (webView != null) {
+            webView.stopLoading();
+            ((FrameLayout) webView.getParent()).removeView(webView);
+            webView.destroy();
+            webView = null;
+        }
         super.onDestroy();
-    }
-
-    /* JADX INFO: Access modifiers changed from: private */
-    public Object StringtoJson(String str) {
-        try {
-            System.out.println("获取到url：" + str);
-            String[] split = str.split(LoginConstants.AND);
-            HashMap hashMap = new HashMap();
-            for (String str2 : split) {
-                String[] split2 = str2.split(LoginConstants.EQUAL);
-                if(split2.length > 1) {
-                    hashMap.put(split2[0], split2[1]);
-                }
-            }
-            System.out.println("获取到code：" + hashMap);
-            return hashMap;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
     }
 }

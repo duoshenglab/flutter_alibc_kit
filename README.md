@@ -257,3 +257,56 @@ FlutterAlibc.syncForTaoke(true);
 ``` dart
 FlutterAlibc.useAlipayNative(true);
 ```
+
+## Android 渠道备案 `qdByHide`
+
+先成功调用 `initAlibc` 和 `loginTaoBao`，再调用渠道备案。插件复用百川登录态，
+在透明 Activity 中加载 WebView，识别淘宝 OAuth 授权按钮并尝试自动提交。
+Android SDK 4.1.0.4 的打开类型只有 Auto/Native，此接口固定使用 Auto，
+其他打开类型参数为兼容已有 Dart 调用保留。淘宝服务端可能要求重新登录、验证码或额外交互，
+遇到这些情况应使用可见授权流程，不保证每次都能静默完成。
+
+```dart
+// 放在 loginTaoBao 成功后的回调中；state 应为本次请求生成并保存的随机值。
+final authUrl = Uri.https('oauth.m.taobao.com', '/authorize', {
+  'response_type': 'code', // 或 token
+  'client_id': '你的淘宝联盟APPKEY',
+  'redirect_uri': 'https://你的域名/已登记的回调路径',
+  'state': oauthState,
+  'view': 'web',
+});
+FlutterAlibc.qdByHide(
+  url: authUrl.toString(),
+  taokeCallback: (result) {
+    if (result['errorCode'] == '0') {
+      final data = result['data'] as Map;
+      final code = data['code'];
+      final token = data['access_token'];
+      // 将 code 或 token 传给服务端完成渠道备案；不要写入日志。
+    } else {
+      // result['errorCode'] / result['errorMessage'] 用于处理失败。
+    }
+  },
+);
+```
+
+成功结果保持现有回调契约：`errorCode: "0"`，`data` 中包含 OAuth 回调参数，
+如 `code`，或 `access_token` / `expires_in`。支持 query 和 fragment，保留 URL 解码后的完整值。
+插件仅接受与请求中 redirect_uri 匹配的回调，并校验请求中的 state。
+它会拦截结果导航并关闭 WebView，因此获取结果不依赖回调页面引入 `Baichuan.closeWebView()`；
+回调 URL 仍须正确登记，服务端兑换 code/备案需由调用方完成。
+
+失败码包括 `NOT_LOGGED_IN`、`INVALID_URL`、`INVALID_CALLBACK`、`AUTH_DENIED`、
+`BUSY`、`TIMEOUT`、`CANCELLED`、`LOAD_FAILED`、`HTTP_ERROR`、`OPEN_FAILED`、
+`START_FAILED`、`NO_ACTIVITY`、`PLATFORM_ERROR`，以及 SDK 原始错误码。
+一次请求最多等待 30 秒，只回调一次；并发调用不会覆盖正在等待的回调。
+回调地址支持 HTTP(S)，必须与 OAuth 请求内地址一致；该实现仅针对 Android。
+
+本地验证：
+
+```sh
+flutter test
+node android/tests/qd_authorize_test.js
+javac -d /tmp/qd-tests android/src/main/java/com/wxwx/flutter_alibc/QdOAuthRequest.java android/src/test/java/com/wxwx/flutter_alibc/QdOAuthRequestTest.java
+java -cp /tmp/qd-tests com.wxwx.flutter_alibc.QdOAuthRequestTest
+```
